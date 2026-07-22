@@ -153,6 +153,18 @@ export default function OrdersScreen() {
       : riderStatusOptions(selectedOrder.status)
   }, [selectedOrder, isAdmin])
 
+  /** Delivered + paid orders cannot change status or payment */
+  const isOrderFinalized =
+    selectedOrder?.status === 'delivered' &&
+    selectedOrder?.payment_status === 'success'
+
+  const canUpdateStatus = Boolean(
+    selectedOrder && !isOrderFinalized && statusOptions.length > 0
+  )
+  const canUpdatePayment = Boolean(selectedOrder && !isOrderFinalized)
+  const showActionBar =
+    canUpdatePayment || canUpdateStatus || (isAdmin && Boolean(selectedOrder))
+
   const openDetail = async (order: OpsOrder) => {
     try {
       const full = await opsService.getOrderById(order.id)
@@ -164,7 +176,7 @@ export default function OrdersScreen() {
   }
 
   const applyStatusUpdate = async (statusValue: string, notes?: string) => {
-    if (!selectedOrder) return
+    if (!selectedOrder || isOrderFinalized) return
     setUpdating(true)
     try {
       const updated = await opsService.updateOrderStatus(
@@ -185,7 +197,7 @@ export default function OrdersScreen() {
   }
 
   const handleStatusUpdate = () => {
-    if (!selectedOrder || !newStatus) return
+    if (!selectedOrder || !newStatus || isOrderFinalized) return
     confirmAction(
       'Confirm status change',
       `Change order #${selectedOrder.order_number} from "${formatLabel(selectedOrder.status)}" to "${formatLabel(newStatus)}"?`,
@@ -194,7 +206,7 @@ export default function OrdersScreen() {
   }
 
   const handlePaymentUpdate = () => {
-    if (!selectedOrder || !paymentStatus) return
+    if (!selectedOrder || !paymentStatus || isOrderFinalized) return
     const label = paymentStatus === 'success' ? 'Paid' : formatLabel(paymentStatus)
     confirmAction(
       'Confirm payment update',
@@ -622,8 +634,15 @@ export default function OrdersScreen() {
                   )}
                 </View>
 
-                {!isAdmin &&
-                !['ready', 'out_for_delivery'].includes(selectedOrder.status) ? (
+                {isOrderFinalized ? (
+                  <View style={[styles.section, { backgroundColor: colors.accentSoft }]}>
+                    <Text style={styles.sectionValue}>
+                      This order is delivered and paid. Status and payment can no longer be
+                      changed.
+                    </Text>
+                  </View>
+                ) : !isAdmin &&
+                  !['ready', 'out_for_delivery'].includes(selectedOrder.status) ? (
                   <View style={[styles.section, { backgroundColor: colors.accentSoft }]}>
                     <Text style={styles.sectionValue}>
                       Status updates unlock when this order is ready for delivery.
@@ -631,49 +650,52 @@ export default function OrdersScreen() {
                   </View>
                 ) : null}
 
-                <View style={{ height: 120 }} />
+                <View style={{ height: showActionBar ? 120 : 24 }} />
               </>
             ) : null}
           </ScrollView>
 
-          {/* Sticky actions: one primary + more */}
-          <View style={styles.actionBar}>
-            <View style={styles.secondaryRow}>
-              <TouchableOpacity
-                style={styles.secondaryBtn}
-                onPress={() => {
-                  setPaymentStatus('success')
-                  setShowPaymentModal(true)
-                }}
-              >
-                <MaterialIcons name="payments" size={18} color={colors.accentText} />
-                <Text style={styles.secondaryBtnText}>Payment</Text>
-              </TouchableOpacity>
+          {showActionBar ? (
+            <View style={styles.actionBar}>
+              <View style={styles.secondaryRow}>
+                {canUpdatePayment ? (
+                  <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={() => {
+                      setPaymentStatus('success')
+                      setShowPaymentModal(true)
+                    }}
+                  >
+                    <MaterialIcons name="payments" size={18} color={colors.accentText} />
+                    <Text style={styles.secondaryBtnText}>Payment</Text>
+                  </TouchableOpacity>
+                ) : null}
 
-              {statusOptions.length > 0 ? (
-                <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={() => {
-                    setNewStatus(statusOptions[0])
-                    setShowStatusModal(true)
-                  }}
-                >
-                  <MaterialIcons name="sync" size={18} color={colors.accentText} />
-                  <Text style={styles.secondaryBtnText}>Status</Text>
-                </TouchableOpacity>
-              ) : null}
+                {canUpdateStatus ? (
+                  <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={() => {
+                      setNewStatus(statusOptions[0])
+                      setShowStatusModal(true)
+                    }}
+                  >
+                    <MaterialIcons name="sync" size={18} color={colors.accentText} />
+                    <Text style={styles.secondaryBtnText}>Status</Text>
+                  </TouchableOpacity>
+                ) : null}
 
-              {isAdmin ? (
-                <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={() => setShowMoreActions(true)}
-                >
-                  <MaterialIcons name="more-horiz" size={18} color={colors.accentText} />
-                  <Text style={styles.secondaryBtnText}>More</Text>
-                </TouchableOpacity>
-              ) : null}
+                {isAdmin ? (
+                  <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={() => setShowMoreActions(true)}
+                  >
+                    <MaterialIcons name="more-horiz" size={18} color={colors.accentText} />
+                    <Text style={styles.secondaryBtnText}>More</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
-          </View>
+          ) : null}
         </SafeAreaView>
       </Modal>
 
