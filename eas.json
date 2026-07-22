@@ -1,0 +1,43 @@
+{
+  "cli": {
+    "version": ">= 5.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "API_BASE_URL": "http://127.0.0.1:8001/api",
+        "NODE_ENV": "development"
+      }
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal",
+      "autoIncrement": true,
+      "env": {
+        "API_BASE_URL": "https://api.pugyoo.com/api",
+        "NODE_ENV": "production"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "autoIncrement": true,
+      "env": {
+        "API_BASE_URL": "https://api.pugyoo.com/api",
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_syv3dHMigfwKZh5zcY7fhoeTdGQLUitUTiAyJ8qzaUPL",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
+
