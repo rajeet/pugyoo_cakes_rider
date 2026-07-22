@@ -44,6 +44,15 @@ const STATUS_FILTERS = [
 
 const PAYMENT_FILTERS = ['all', 'pending', 'paid', 'failed', 'refunded']
 
+const statusFilterLabel = (status: string) => {
+  if (status === 'all') return 'All statuses'
+  if (status === 'out_for_delivery') return 'Out for delivery'
+  return formatLabel(status)
+}
+
+const paymentFilterLabel = (pay: string) =>
+  pay === 'all' ? 'All payments' : formatLabel(pay)
+
 const ADMIN_PAYMENT_OPTIONS = ['success', 'failed', 'cancelled', 'refunded', 'pending']
 const RIDER_PAYMENT_OPTIONS = ['success', 'failed', 'pending']
 
@@ -82,6 +91,8 @@ export default function OrdersScreen() {
   const [search, setSearch] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedPayment, setSelectedPayment] = useState('all')
+  const [showStatusFilter, setShowStatusFilter] = useState(false)
+  const [showPaymentFilter, setShowPaymentFilter] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<OpsOrder | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
@@ -153,17 +164,17 @@ export default function OrdersScreen() {
       : riderStatusOptions(selectedOrder.status)
   }, [selectedOrder, isAdmin])
 
-  /** Delivered + paid orders cannot change status or payment */
+  /** Delivered + paid orders: hide Payment, Status, and More */
   const isOrderFinalized =
     selectedOrder?.status === 'delivered' &&
-    selectedOrder?.payment_status === 'success'
+    ['paid', 'success'].includes(selectedOrder?.payment_status || '')
 
   const canUpdateStatus = Boolean(
     selectedOrder && !isOrderFinalized && statusOptions.length > 0
   )
   const canUpdatePayment = Boolean(selectedOrder && !isOrderFinalized)
-  const showActionBar =
-    canUpdatePayment || canUpdateStatus || (isAdmin && Boolean(selectedOrder))
+  const canShowMore = Boolean(isAdmin && selectedOrder && !isOrderFinalized)
+  const showActionBar = canUpdatePayment || canUpdateStatus || canShowMore
 
   const openDetail = async (order: OpsOrder) => {
     try {
@@ -426,69 +437,79 @@ export default function OrdersScreen() {
         ) : null}
       </View>
 
-      <View style={styles.filterBlock}>
-        <Text style={styles.filterLabel}>Status</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroll}
-          contentContainerStyle={styles.filters}
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={styles.dropdown}
+          onPress={() => setShowStatusFilter(true)}
+          activeOpacity={0.85}
         >
-          {STATUS_FILTERS.map((status) => {
-            const active = selectedStatus === status
-            const label =
-              status === 'all'
-                ? 'All'
-                : status === 'out_for_delivery'
-                  ? 'Out for delivery'
-                  : formatLabel(status)
-            return (
-              <TouchableOpacity
-                key={status}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setSelectedStatus(status)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[styles.chipText, active && styles.chipTextActive]}
-                  numberOfLines={1}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
+          <Text style={styles.dropdownLabel} numberOfLines={1}>
+            {statusFilterLabel(selectedStatus)}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={22} color={colors.muted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.dropdown}
+          onPress={() => setShowPaymentFilter(true)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.dropdownLabel} numberOfLines={1}>
+            {paymentFilterLabel(selectedPayment)}
+          </Text>
+          <MaterialIcons name="arrow-drop-down" size={22} color={colors.muted} />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.filterBlock}>
-        <Text style={styles.filterLabel}>Payment</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroll}
-          contentContainerStyle={styles.filters}
-        >
-          {PAYMENT_FILTERS.map((pay) => {
-            const active = selectedPayment === pay
-            return (
+      <Modal visible={showStatusFilter} transparent animationType="fade">
+        <Pressable style={styles.sheetOverlay} onPress={() => setShowStatusFilter(false)}>
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Filter by status</Text>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {STATUS_FILTERS.map((status) => (
+                <TouchableOpacity
+                  key={status}
+                  style={[styles.option, selectedStatus === status && styles.optionActive]}
+                  onPress={() => {
+                    setSelectedStatus(status)
+                    setShowStatusFilter(false)
+                  }}
+                >
+                  <Text style={styles.optionText}>{statusFilterLabel(status)}</Text>
+                  {selectedStatus === status ? (
+                    <MaterialIcons name="check" size={20} color={colors.accent} />
+                  ) : null}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={showPaymentFilter} transparent animationType="fade">
+        <Pressable style={styles.sheetOverlay} onPress={() => setShowPaymentFilter(false)}>
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Filter by payment</Text>
+            {PAYMENT_FILTERS.map((pay) => (
               <TouchableOpacity
                 key={pay}
-                style={[styles.chip, active && styles.chipActivePay]}
-                onPress={() => setSelectedPayment(pay)}
-                activeOpacity={0.8}
+                style={[styles.option, selectedPayment === pay && styles.optionActive]}
+                onPress={() => {
+                  setSelectedPayment(pay)
+                  setShowPaymentFilter(false)
+                }}
               >
-                <Text
-                  style={[styles.chipText, active && styles.chipTextActive]}
-                  numberOfLines={1}
-                >
-                  {pay === 'all' ? 'All' : formatLabel(pay)}
-                </Text>
+                <Text style={styles.optionText}>{paymentFilterLabel(pay)}</Text>
+                {selectedPayment === pay ? (
+                  <MaterialIcons name="check" size={20} color={colors.accent} />
+                ) : null}
               </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
-      </View>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {loading ? (
         <ActivityIndicator style={{ marginTop: 48 }} color={colors.accent} />
@@ -684,7 +705,7 @@ export default function OrdersScreen() {
                   </TouchableOpacity>
                 ) : null}
 
-                {isAdmin ? (
+                {canShowMore ? (
                   <TouchableOpacity
                     style={styles.secondaryBtn}
                     onPress={() => setShowMoreActions(true)}
@@ -980,6 +1001,31 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   searchInput: { flex: 1, fontSize: 15, color: colors.ink, paddingVertical: 2 },
+  filterRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  dropdown: {
+    flex: 1,
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+  },
+  dropdownLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.ink,
+  },
   filterBlock: {
     marginTop: 4,
     marginBottom: 2,

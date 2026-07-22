@@ -13,7 +13,7 @@ module.exports = {
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#E91E63',
+      backgroundColor: '#0F766E',
     },
     assetBundlePatterns: ['**/*'],
     plugins: [
@@ -21,7 +21,7 @@ module.exports = {
         'expo-notifications',
         {
           icon: './assets/icon.png',
-          color: '#E91E63',
+          color: '#0F766E',
           sounds: [],
         },
       ],
@@ -39,7 +39,7 @@ module.exports = {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#E91E63',
+        backgroundColor: '#0F766E',
       },
       package: 'com.cakeproject.mobile.ops',
       permissions: [
